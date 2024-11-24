@@ -1,41 +1,47 @@
 import tensorflow as tf
 
-class WeightedR2Mertric(tf.keras.Metric):
-    def __init__(self, name='weighted_r2', **kwargs):
+class BacktestMetric(tf.keras.Metric):
+    def __init__(self, name='weighted_r2', interest=6, **kwargs):
         super().__init__(name=name, **kwargs)
-        self.unexplained_error = self.add_variable(
+        self.interest = interest
+        self.metric = self.add_variable(
             shape=(),
             initializer='zeros',
-            name='true_positives',
-            dtype=tf.float32
-        )
-        self.total_error = self.add_variable(
-            shape=(),
-            initializer='zeros',
-            name='true_positives',
+            name='metric',
             dtype=tf.float32
         )
 
     def update_state(self, y_true, y_pred, sample_weight=None):
-        target_shape = y_pred.shape[1] // 2
+        bid = y_true[:, 0]
+        ask = y_true[:, 1]
+        delayed_bid = y_true[:, 2]
+        delayed_ask = y_true[:, 3]
 
-        y_pred = y_pred[:, 0]
-        delayed_bid = y_pred[:, 1]
-        delayed_ask = y_pred[:, 2]
+        reg_bid = y_true[:, 4]
+        reg_ask = y_true[:, 5]
 
-        reg_bid = y_pred[:, 3]
-        reg_ask = y_pred[:, 4]
-
-        y_true = tf.reshape(y_true, shape = (-1, 1))
         y_pred = tf.reshape(y_pred, shape = (-1, 1))
-        weights = tf.reshape(weights, shape = (-1, 1))
+        bid = tf.reshape(bid, shape = (-1, 1))
+        ask = tf.reshape(ask, shape = (-1, 1))
+        delayed_bid = tf.reshape(delayed_bid, shape = (-1, 1))
+        delayed_ask = tf.reshape(delayed_ask, shape = (-1, 1))
+        reg_bid = tf.reshape(reg_bid, shape = (-1, 1))
+        reg_ask = tf.reshape(reg_ask, shape = (-1, 1))
 
-        self.unexplained_error.assign_add(tf.math.reduce_sum(weights * tf.square(y_true - y_pred)))
-        self.total_error.assign_add(tf.math.reduce_sum(weights * tf.square(y_true)))
+        bid_not_skip_mask = tf.logical_and(
+            y_pred < bid * (1 - 1e-4 * self.interest),
+            y_pred < delayed_bid * (1 - 1e-4 * self.interest)
+        )
+        ask_not_skip_mask = tf.logical_and(
+            y_pred > ask * (1 + 1e-4 * self.interest),
+            y_pred > delayed_ask * (1 + 1e-4 * self.interest),
+        )
+
+        self.metric.assign_add(tf.math.reduce_sum(-10000 * (tf.boolean_mask(reg_ask, bid_not_skip_mask) / tf.boolean_mask(delayed_bid, bid_not_skip_mask) - 1) - 1.8))
+        self.metric.assign_add(tf.math.reduce_sum(10000 * (tf.boolean_mask(reg_bid, ask_not_skip_mask) / tf.boolean_mask(delayed_ask, ask_not_skip_mask) - 1) - 1.8))
 
     def result(self):
-        return 1 - self.unexplained_error / self.total_error
+        return self.metric
     
     def reset_state(self):
-        self.total_error.assign(0)
-        self.unexplained_error.assign(0)
+        self.metric.assign(0)
