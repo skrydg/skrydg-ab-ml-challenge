@@ -6,3 +6,5 @@ from .dataset import Dataset
 from .seed import *
 from .display_graphs import display_graphs
 from .preprocessing import *
+from .group_kfold import *
+from .kfold import *
