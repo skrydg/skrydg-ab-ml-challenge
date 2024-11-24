@@ -1,4 +1,4 @@
-class PreTrainedLightGbmModel:
+class PreTrainedDNNModel:
     def __init__(self, model):
         self.model = model
 
