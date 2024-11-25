@@ -8,4 +8,4 @@ class KFold:
         self.splitter = sklearn.model_selection.KFold(n_splits)
         
     def split(self, df):
-       yield from self.splitter.split(df, None)
+       yield from self.splitter.split(df, None, random_state=42)

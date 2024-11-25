@@ -6,7 +6,6 @@ def backtest_loss(y_true, y_pred):
     ask = y_true[:, 1]
     delayed_bid = y_true[:, 2]
     delayed_ask = y_true[:, 3]
-
     reg_bid = y_true[:, 4]
     reg_ask = y_true[:, 5]
 
@@ -18,16 +17,34 @@ def backtest_loss(y_true, y_pred):
     reg_bid = tf.reshape(reg_bid, shape = (-1, 1))
     reg_ask = tf.reshape(reg_ask, shape = (-1, 1))
 
-    bid_not_skip_mask = tf.logical_and(
-        y_pred < bid,
-        y_pred < delayed_bid
-    )
-    ask_not_skip_mask = tf.logical_and(
-        y_pred > ask,
-        y_pred > delayed_ask
-    )
+    mask = tf.math.logical_and(tf.math.logical_not(tf.math.is_nan(bid)), tf.math.logical_not(tf.math.is_nan(ask)))
+    mask = tf.math.logical_and(mask, tf.math.logical_not(tf.math.is_nan(delayed_bid)))
+    mask = tf.math.logical_and(mask, tf.math.logical_not(tf.math.is_nan(delayed_ask)))
+    mask = tf.math.logical_and(mask, tf.math.logical_not(tf.math.is_nan(reg_bid)))
+    mask = tf.math.logical_and(mask, tf.math.logical_not(tf.math.is_nan(reg_ask)))
+    
+    y_pred = tf.boolean_mask(y_pred, mask)
+    bid = tf.boolean_mask(bid, mask)
+    ask = tf.boolean_mask(ask, mask)
+    delayed_bid = tf.boolean_mask(delayed_bid, mask)
+    delayed_ask = tf.boolean_mask(delayed_ask, mask)
+    reg_bid = tf.boolean_mask(reg_bid, mask)
+    reg_ask = tf.boolean_mask(reg_ask, mask)
+    
+    mid_price = (bid + ask) / 2
+    spread = mid_price - bid
 
-    res = tf.math.reduce_sum(-10000 * (tf.boolean_mask(reg_ask, bid_not_skip_mask) / tf.boolean_mask(delayed_bid, bid_not_skip_mask) - 1) - 1.8)
-    res = res + tf.math.reduce_sum(10000 * (tf.boolean_mask(reg_bid, ask_not_skip_mask) / tf.boolean_mask(delayed_ask, ask_not_skip_mask) - 1) - 1.8)
+    weight = tf.math.abs(y_pred)
+    weight = tf.math.minimum(weight, 5)
+    weight = tf.math.multiply(weight, weight)
+    
+    sell_mask = y_pred > 0
+    buy_mask = y_pred <= 0
 
-    return res
+    buy_profit = -10000 * (tf.boolean_mask(reg_ask, buy_mask) / tf.boolean_mask(delayed_bid, buy_mask) - 1) - 1.8
+    sell_profit = 10000 * (tf.boolean_mask(reg_bid, sell_mask) / tf.boolean_mask(delayed_ask, sell_mask) - 1) - 1.8
+
+    res = tf.math.reduce_sum(buy_profit * tf.boolean_mask(weight, buy_mask)) + \
+            tf.math.reduce_sum(sell_profit * tf.boolean_mask(weight, sell_mask))
+
+    return -res
