@@ -57,7 +57,7 @@ class FFKFoldModel:
 
         normalized_X = tf.keras.layers.Normalization(mean=mean, variance=variance)(X)
         output_X = normalized_X
-        #output_X = tf.keras.layers.GaussianDropout(0.03, seed=42)(normalized_X)
+        output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(normalized_X)
         output_X = tf.keras.layers.Dense(
             units=256,
             activation='linear'
@@ -67,7 +67,7 @@ class FFKFoldModel:
         output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
 
         output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
-        #output_X = tf.keras.layers.GaussianDropout(0.03, seed=42)(output_X)
+        output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(output_X)
         output_X = tf.keras.layers.Dense(
             units=128,
             activation='linear'
@@ -75,7 +75,7 @@ class FFKFoldModel:
         #output_X = tf.keras.layers.BatchNormalization()(output_X)
         output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
         output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
-        #output_X = tf.keras.layers.GaussianDropout(0.03, seed=42)(output_X)
+        output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(output_X)
         output_X = tf.keras.layers.Dense(
             units=64,
             activation='linear'
@@ -83,7 +83,7 @@ class FFKFoldModel:
         # output_X = tf.keras.layers.BatchNormalization()(output_X)
         output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
         output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
-        #output_X = tf.keras.layers.GaussianDropout(0.03, seed=42)(output_X)
+        output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(output_X)
         output_X = tf.keras.layers.Dense(units=1)(output_X)
         
         model = tf.keras.Model(X, output_X)
