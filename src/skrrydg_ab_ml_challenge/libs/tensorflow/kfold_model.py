@@ -25,7 +25,7 @@ class FFKFoldModel:
         self.model = None
         self.train_data = None
 
-    def __pack(self, records):
+    def __pack_train(self, records):
         target_columns = [
             tf.cast(records[column], tf.float32) 
             for column in self.target_columns
@@ -39,7 +39,16 @@ class FFKFoldModel:
         features = tf.stack(features, axis=-1)
 
         return features, target_columns
-        
+    
+    def __pack_test(self, records):
+        features = [
+            tf.cast(records[feature], tf.float32) 
+            for feature in self.features 
+        ]
+        features = tf.stack(features, axis=-1)
+
+        return features
+    
     def __build_model(self, dataframe):
         mean = dataframe[self.features].mean().to_numpy()[0]
         variance = dataframe[self.features].var().to_numpy()[0]
@@ -112,14 +121,14 @@ class FFKFoldModel:
             
             train_deserializer = DatasetDeserializer(train_serialized_directory)
             train_dataset = train_deserializer.deserialize()
-            train_dataset = train_dataset.map(self.__pack).unbatch().shuffle(buffer_size=self.count_rows_in_memory).batch(self.batch_size)
+            train_dataset = train_dataset.map(self.__pack_train).unbatch().shuffle(buffer_size=self.count_rows_in_memory).batch(self.batch_size)
 
             test_serializer = DatasetSerializer(self.env.output_directory / f"test_dataset_{index}")
             test_serialized_directory = test_serializer.serialize(test_dataframe[self.all_features])
             
             test_deserializer = DatasetDeserializer(test_serialized_directory)
             test_dataset = test_deserializer.deserialize()
-            test_dataset = test_dataset.map(self.__pack).rebatch(self.batch_size)
+            test_dataset = test_dataset.map(self.__pack_train).rebatch(self.batch_size)
             
             finish = time.time()
             print(f"Finish data serialization, time={finish - start}", flush=True)
@@ -160,11 +169,11 @@ class FFKFoldModel:
         
     def predict(self, dataframe):
         serializer = DatasetSerializer(self.env.output_directory / "predict_dataset")
-        serializer.serialize(dataframe[self.features].iter_slices(self.count_rows_in_memory), rows=dataframe.shape[0], force=True)
+        serialized_directory = serializer.serialize(dataframe[self.features])
         
-        deserializer = DatasetDeserializer(self.env.output_directory / "predict_dataset")
+        deserializer = DatasetDeserializer(serialized_directory)
         dataset = deserializer.deserialize()
-        dataset = dataset.map(self.__pack).unbatch()
+        dataset = dataset.map(__pack_test).unbatch()
         dataset = dataset.batch(self.batch_size).prefetch(tf.data.AUTOTUNE)
 
         predicted = self.model.predict(dataset)
