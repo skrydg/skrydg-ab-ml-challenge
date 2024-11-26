@@ -173,7 +173,7 @@ class FFKFoldModel:
         
         deserializer = DatasetDeserializer(serialized_directory)
         dataset = deserializer.deserialize()
-        dataset = dataset.map(__pack_test).unbatch()
+        dataset = dataset.map(self.__pack_test).unbatch()
         dataset = dataset.batch(self.batch_size).prefetch(tf.data.AUTOTUNE)
 
         predicted = self.model.predict(dataset)
