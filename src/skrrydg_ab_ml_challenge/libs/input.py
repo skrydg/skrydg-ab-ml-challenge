@@ -1,7 +1,7 @@
 import polars as pl
 
-from kaggle_jane_street_real_time_market_data_forecasting.libs.env import Env
-from kaggle_jane_street_real_time_market_data_forecasting.libs.dataset import Dataset
+from skrrydg_ab_ml_challenge.libs.env import Env
+from skrrydg_ab_ml_challenge.libs.dataset import Dataset
 
 class Input:
     def __init__(self, env: Env):
