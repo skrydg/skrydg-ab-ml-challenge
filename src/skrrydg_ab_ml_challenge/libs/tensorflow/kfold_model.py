@@ -141,8 +141,8 @@ class FFKFoldModel:
             reduce_lr_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=5, min_lr=3 * 1e-5)
             earlystop_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True)
             history = model.fit(
-                train_dataset.prefetch(tf.data.AUTOTUNE).repeat(),
-                validation_data=test_dataset.prefetch(tf.data.AUTOTUNE).repeat(),
+                train_dataset.cache().repeat(),
+                validation_data=test_dataset.cache().repeat(),
                 steps_per_epoch=train_dataframe_shape[0] // self.batch_size + 1,
                 validation_steps=test_dataframe_shape[0] // self.batch_size + 1,
                 callbacks=[reduce_lr_callback, earlystop_callback],
