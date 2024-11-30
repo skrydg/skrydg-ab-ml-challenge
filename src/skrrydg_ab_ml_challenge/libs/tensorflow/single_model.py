@@ -11,8 +11,9 @@ from skrrydg_ab_ml_challenge.libs.tensorflow.backtest_metric import BacktestMetr
 from skrrydg_ab_ml_challenge.libs.tensorflow.dataset import DatasetSerializer, DatasetDeserializer
 from skrrydg_ab_ml_challenge.libs.tensorflow.backtest_loss import backtest_loss
 from skrrydg_ab_ml_challenge.libs.tensorflow.pretrained_model import PreTrainedDNNModel
+from skrrydg_ab_ml_challenge.libs.kfold import KFold
 
-class FFKFoldModel:
+class SingleModel:
     def __init__(self, env: Env, features):
         self.env = env
         self.features = features
@@ -49,7 +50,10 @@ class FFKFoldModel:
 
         return features
     
-    def __build_model(self, dataframe):        
+    def __build_model(self, dataframe):
+        mean = dataframe[self.features].mean().to_numpy()[0]
+        variance = dataframe[self.features].var().to_numpy()[0]
+        
         X = tf.keras.layers.Input(shape=(len(self.features), ))
 
         #normalized_X = tf.keras.layers.Normalization(mean=mean, variance=variance)(X)
@@ -61,7 +65,7 @@ class FFKFoldModel:
             activation='linear'
         )(output_X)
 
-        output_X = tf.keras.layers.BatchNormalization()(output_X)
+        #output_X = tf.keras.layers.BatchNormalization()(output_X)
         output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
 
         output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
@@ -70,7 +74,7 @@ class FFKFoldModel:
             units=128,
             activation='linear'
         )(output_X)
-        output_X = tf.keras.layers.BatchNormalization()(output_X)
+        #output_X = tf.keras.layers.BatchNormalization()(output_X)
         output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
         output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
         output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(output_X)
@@ -78,7 +82,7 @@ class FFKFoldModel:
             units=64,
             activation='linear'
         )(output_X)
-        output_X = tf.keras.layers.BatchNormalization()(output_X)
+        # output_X = tf.keras.layers.BatchNormalization()(output_X)
         output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
         output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
         output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(output_X)
@@ -94,7 +98,7 @@ class FFKFoldModel:
         model.summary()
         return model
         
-    def train(self, dataframe, kfold):
+    def train(self, dataframe):
         self.train_data = {
             "backtest_metric": [],
             "loss": [],
@@ -103,65 +107,68 @@ class FFKFoldModel:
             "history": []
         }
         
+        dataframe = dataframe.sample(fraction=1, shuffle=True, seed=42)
+        kfold = KFold(5)
+        train_idx, test_idx = next(kfold.split(dataframe))
+        
         fitted_models = []
-        for index, (train_idx, test_idx) in enumerate(kfold.split(dataframe)):
-            print("Start data serialization", flush=True)
-            start = time.time()
+        print("Start data serialization", flush=True)
+        start = time.time()
 
-            train_dataframe = dataframe[train_idx][self.all_features].sample(fraction=1, shuffle=True, seed=42)
-            test_dataframe = dataframe[test_idx][self.all_features]
+        train_dataframe = dataframe[train_idx][self.all_features].sample(fraction=1, shuffle=True, seed=42)
+        test_dataframe = dataframe[test_idx][self.all_features]
 
-            train_dataframe_shape = train_dataframe.shape
-            test_dataframe_shape = test_dataframe.shape
-            
-            train_serializer = DatasetSerializer(self.env.output_directory / f"train_dataset_{index}")
-            train_serialized_directory = train_serializer.serialize(train_dataframe[self.all_features])
-            
-            train_deserializer = DatasetDeserializer(train_serialized_directory)
-            train_dataset = train_deserializer.deserialize()
-            train_dataset = train_dataset.map(self.__pack_train).unbatch().shuffle(buffer_size=self.count_rows_in_memory).batch(self.batch_size)
+        train_dataframe_shape = train_dataframe.shape
+        test_dataframe_shape = test_dataframe.shape
+        
+        train_serializer = DatasetSerializer(self.env.output_directory / f"train_dataset")
+        train_serialized_directory = train_serializer.serialize(train_dataframe[self.all_features])
+        
+        train_deserializer = DatasetDeserializer(train_serialized_directory)
+        train_dataset = train_deserializer.deserialize()
+        train_dataset = train_dataset.map(self.__pack_train).unbatch().shuffle(buffer_size=self.count_rows_in_memory).batch(self.batch_size)
 
-            test_serializer = DatasetSerializer(self.env.output_directory / f"test_dataset_{index}")
-            test_serialized_directory = test_serializer.serialize(test_dataframe[self.all_features])
-            
-            test_deserializer = DatasetDeserializer(test_serialized_directory)
-            test_dataset = test_deserializer.deserialize()
-            test_dataset = test_dataset.map(self.__pack_train).rebatch(self.batch_size)
-            
-            finish = time.time()
-            print(f"Finish data serialization, time={finish - start}", flush=True)
-                        
-            model = self.__build_model(train_dataframe)
+        test_serializer = DatasetSerializer(self.env.output_directory / f"test_dataset")
+        test_serialized_directory = test_serializer.serialize(test_dataframe[self.all_features])
+        
+        test_deserializer = DatasetDeserializer(test_serialized_directory)
+        test_dataset = test_deserializer.deserialize()
+        test_dataset = test_dataset.map(self.__pack_train).rebatch(self.batch_size)
+        
+        finish = time.time()
+        print(f"Finish data serialization, time={finish - start}", flush=True)
+                    
+        model = self.__build_model(train_dataframe)
 
-            del train_dataframe
-            del test_dataframe
-            gc.collect()
-            reduce_lr_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=5, min_lr=3 * 1e-5)
-            earlystop_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True)
-            history = model.fit(
-                train_dataset.cache().repeat(),
-                validation_data=test_dataset.cache().repeat(),
-                steps_per_epoch=train_dataframe_shape[0] // self.batch_size + 1,
-                validation_steps=test_dataframe_shape[0] // self.batch_size + 1,
-                callbacks=[reduce_lr_callback, earlystop_callback],
-                verbose=1,
-                epochs=50)
+        del train_dataframe
+        del test_dataframe
+        gc.collect()
+        reduce_lr_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=5, min_lr=3 * 1e-5)
+        earlystop_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True)
+        history = model.fit(
+            train_dataset.cache().repeat(),
+            validation_data=test_dataset.cache().repeat(),
+            steps_per_epoch=train_dataframe_shape[0] // self.batch_size + 1,
+            validation_steps=test_dataframe_shape[0] // self.batch_size + 1,
+            callbacks=[reduce_lr_callback, earlystop_callback],
+            verbose=1,
+            epochs=50)
 
-            model = PreTrainedDNNModel(model)
-            fitted_models.append(model)
-            gc.collect()
-            finish = time.time()
-            print(f"Fit time: {finish - start}, iteration={index}")
+        model = PreTrainedDNNModel(model)
+        fitted_models.append(model)
+        gc.collect()
+        finish = time.time()
+        print(f"Fit time: {finish - start}")
 
-            test_predicted = model.predict(test_dataset)
-            self.train_data["oof_indexes"].extend(test_idx)
-            self.train_data["oof_predicted"].extend(test_predicted[:, 0])
+        test_predicted = model.predict(test_dataset)
+        self.train_data["oof_indexes"].extend(test_idx)
+        self.train_data["oof_predicted"].extend(test_predicted[:, 0])
 
-            metric = BacktestMetric()
-            metric.update_state(dataframe[self.target_columns][test_idx].to_numpy(), test_predicted)
-            self.train_data["backtest_metric"].append(metric.result().numpy())
-            self.train_data["loss"].append(backtest_loss(dataframe[self.target_columns][test_idx].to_numpy(), test_predicted).numpy())
-            self.train_data["history"].append(history)
+        metric = BacktestMetric()
+        metric.update_state(dataframe[self.target_columns][test_idx].to_numpy(), test_predicted)
+        self.train_data["backtest_metric"].append(metric.result().numpy())
+        self.train_data["loss"].append(backtest_loss(dataframe[self.target_columns][test_idx].to_numpy(), test_predicted).numpy())
+        self.train_data["history"].append(history)
 
         self.model = VotingModel(fitted_models)
         
