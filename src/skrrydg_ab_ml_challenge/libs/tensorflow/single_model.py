@@ -50,10 +50,7 @@ class SingleModel:
 
         return features
     
-    def __build_model(self, dataframe):
-        mean = dataframe[self.features].mean().to_numpy()[0]
-        variance = dataframe[self.features].var().to_numpy()[0]
-        
+    def __build_model(self, dataframe):        
         X = tf.keras.layers.Input(shape=(len(self.features), ))
 
         #normalized_X = tf.keras.layers.Normalization(mean=mean, variance=variance)(X)
@@ -65,7 +62,7 @@ class SingleModel:
             activation='linear'
         )(output_X)
 
-        #output_X = tf.keras.layers.BatchNormalization()(output_X)
+        output_X = tf.keras.layers.BatchNormalization()(output_X)
         output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
 
         output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
@@ -74,7 +71,7 @@ class SingleModel:
             units=128,
             activation='linear'
         )(output_X)
-        #output_X = tf.keras.layers.BatchNormalization()(output_X)
+        output_X = tf.keras.layers.BatchNormalization()(output_X)
         output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
         output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
         output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(output_X)
@@ -82,7 +79,7 @@ class SingleModel:
             units=64,
             activation='linear'
         )(output_X)
-        # output_X = tf.keras.layers.BatchNormalization()(output_X)
+        output_X = tf.keras.layers.BatchNormalization()(output_X)
         output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
         output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
         output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(output_X)
