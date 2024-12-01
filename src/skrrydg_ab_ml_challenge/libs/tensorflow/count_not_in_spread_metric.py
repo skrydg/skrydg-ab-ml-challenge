@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 class CountNotInSpreadMetric(tf.keras.Metric):
-    def __init__(self, name='backtest_metric', interest=6, **kwargs):
+    def __init__(self, name='count_not_in_spread', interest=6, **kwargs):
         super().__init__(name=name, **kwargs)
         self.interest = interest
         self.count_not_in_spread = self.add_variable(

@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 class CountDealsMetric(tf.keras.Metric):
-    def __init__(self, name='backtest_metric', interest=6, **kwargs):
+    def __init__(self, name='count_deals_metric', interest=6, **kwargs):
         super().__init__(name=name, **kwargs)
         self.interest = interest
         self.count_deals = self.add_variable(
