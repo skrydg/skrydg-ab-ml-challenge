@@ -34,10 +34,11 @@ def backtest_loss(y_true, y_pred):
     mid_price = (bid + ask) / 2
 
     weight = tf.math.abs(y_pred)
-    weight = weight - 1
+    weight = tf.math.subtract(weight, 1)
     weight = tf.where(weight < 0, weight * 100, weight)
-    #weight = tf.math.minimum(weight, 10)
     weight = tf.math.sigmoid(weight)
+
+    #weight = tf.math.minimum(weight, 10)
     #weight = tf.math.pow(weight, 3)
     
     sell_mask = y_pred > 0
