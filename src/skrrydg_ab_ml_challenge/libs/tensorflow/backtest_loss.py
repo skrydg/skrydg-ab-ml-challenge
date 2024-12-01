@@ -35,7 +35,7 @@ def backtest_loss(y_true, y_pred):
 
     weight = tf.math.abs(y_pred)
     weight = tf.math.subtract(weight, 1)
-    weight = tf.where(weight < 0, weight * 100, weight)
+    weight = tf.where(weight < 0, weight * 1000, weight)
     weight = tf.math.sigmoid(weight)
 
     #weight = tf.math.minimum(weight, 10)
