@@ -11,7 +11,7 @@ class BacktestMetric(tf.keras.Metric):
             dtype=tf.float32
         )
 
-    def update_state(self, y_true, y_pred):
+    def update_state(self, y_true, y_pred, sample_weight=None):
         bid = y_true[:, 0]
         ask = y_true[:, 1]
         delayed_bid = y_true[:, 2]
