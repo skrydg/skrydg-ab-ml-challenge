@@ -104,9 +104,7 @@ class SingleModel:
             "history": []
         }
         
-        dataframe = dataframe.sample(fraction=1, shuffle=True, seed=42)
-        kfold = KFold(5)
-        train_idx, test_idx = next(kfold.split(dataframe))
+        train_idx, test_idx = range(0, int(0.8 * dataframe.shape[0])), range(int(0.8 * dataframe.shape[0]), dataframe.shape[0])
         
         fitted_models = []
         print("Start data serialization", flush=True)
