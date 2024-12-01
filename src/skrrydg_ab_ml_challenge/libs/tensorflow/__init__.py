@@ -4,4 +4,5 @@ from .pretrained_model import *
 from .backtest_loss import *
 from .backtest_metric import *
 from .single_model import *
-from .count_deals import *
+from .count_deals_metric import *
+from .count_not_in_spread_metric import *

@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-class CountDeals(tf.keras.Metric):
+class CountDealsMetric(tf.keras.Metric):
     def __init__(self, name='backtest_metric', interest=6, **kwargs):
         super().__init__(name=name, **kwargs)
         self.interest = interest
@@ -10,6 +10,7 @@ class CountDeals(tf.keras.Metric):
             name='count_deals',
             dtype=tf.float32
         )
+        self.mask = None
 
     def update_state(self, y_true, y_pred):
         bid = y_true[:, 0]
@@ -53,8 +54,10 @@ class CountDeals(tf.keras.Metric):
             fair_price > ask * (1 + 1e-4 * self.interest),
             fair_price > delayed_ask * (1 + 1e-4 * self.interest),
         )
-        self.count_deals.assign_add(tf.math.reduce_sum(bid_not_skip_mask))
-        self.count_deals.assign_add(tf.math.reduce_sum(ask_not_skip_mask))
+        self.count_deals.assign_add(tf.math.reduce_sum(tf.cast(bid_not_skip_mask, tf.int32)))
+        self.count_deals.assign_add(tf.math.reduce_sum(tf.cast(ask_not_skip_mask, tf.int32)))
+
+        self.mask = tf.logical_or(bid_not_skip_mask, ask_not_skip_mask)
 
     def result(self):
         return self.count_deals

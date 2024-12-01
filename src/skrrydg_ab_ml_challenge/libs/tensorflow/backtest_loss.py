@@ -32,17 +32,19 @@ def backtest_loss(y_true, y_pred):
     reg_ask = tf.boolean_mask(reg_ask, mask)
     
     mid_price = (bid + ask) / 2
-    spread = mid_price - bid
 
     weight = tf.math.abs(y_pred)
     weight = tf.math.minimum(weight, 5)
-    weight = tf.math.multiply(weight, weight)
+    weight = tf.math.pow(weight, 1.2)
     
     sell_mask = y_pred > 0
     buy_mask = y_pred <= 0
 
     buy_profit = -10000 * (tf.boolean_mask(reg_ask, buy_mask) / tf.boolean_mask(delayed_bid, buy_mask) - 1) - 1.8
     sell_profit = 10000 * (tf.boolean_mask(reg_bid, sell_mask) / tf.boolean_mask(delayed_ask, sell_mask) - 1) - 1.8
+
+    buy_profit = tf.clip_by_value(buy_profit, -10, 10)
+    sell_profit = tf.clip_by_value(sell_profit, -10, 10)
 
     res = tf.math.reduce_sum(buy_profit * tf.boolean_mask(weight, buy_mask)) + \
             tf.math.reduce_sum(sell_profit * tf.boolean_mask(weight, sell_mask))
