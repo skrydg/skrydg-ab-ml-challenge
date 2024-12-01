@@ -31,10 +31,13 @@ def backtest_loss(y_true, y_pred):
     reg_bid = tf.boolean_mask(reg_bid, mask)
     reg_ask = tf.boolean_mask(reg_ask, mask)
     
-    mid_price = (bid + ask) / 2
+    interest = 6
 
     weight = tf.math.abs(y_pred)
-    weight = tf.math.minimum(weight, 10)
+    weight = tf.where(weight < (1 - 1e-4 * interest), 0.1 * weight, tf.math.pow(weight, 3) * 2)
+
+    weight = tf.math.minimum(weight, 1000)
+
     weight = tf.math.pow(weight, 3)
     
     sell_mask = y_pred > 0
