@@ -8,7 +8,7 @@ class CountNotInSpreadMetric(tf.keras.Metric):
             shape=(),
             initializer='zeros',
             name='count_not_in_spread',
-            dtype=tf.float32
+            dtype=tf.int32
         )
         self.mask = None
 
