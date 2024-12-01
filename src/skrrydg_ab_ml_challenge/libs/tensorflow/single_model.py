@@ -103,7 +103,9 @@ class SingleModel:
             "loss": [],
             "oof_predicted": [],
             "oof_indexes": [],
-            "history": []
+            "history": [],
+            "count_not_in_spread_metric": [],
+            "count_deals_metric": []
         }
         
         train_idx, test_idx = range(0, int(0.8 * dataframe.shape[0])), range(int(0.8 * dataframe.shape[0]), dataframe.shape[0])
