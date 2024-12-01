@@ -1,17 +1,17 @@
 import tensorflow as tf
 
-class BacktestMetric(tf.keras.Metric):
+class CountDeals(tf.keras.Metric):
     def __init__(self, name='backtest_metric', interest=6, **kwargs):
         super().__init__(name=name, **kwargs)
         self.interest = interest
-        self.metric = self.add_variable(
+        self.count_deals = self.add_variable(
             shape=(),
             initializer='zeros',
-            name='metric',
+            name='count_deals',
             dtype=tf.float32
         )
 
-    def update_state(self, y_true, y_pred, sample_weight=None):
+    def update_state(self, y_true, y_pred):
         bid = y_true[:, 0]
         ask = y_true[:, 1]
         delayed_bid = y_true[:, 2]
@@ -53,11 +53,11 @@ class BacktestMetric(tf.keras.Metric):
             fair_price > ask * (1 + 1e-4 * self.interest),
             fair_price > delayed_ask * (1 + 1e-4 * self.interest),
         )
-        self.metric.assign_add(tf.math.reduce_sum(-10000 * (tf.boolean_mask(reg_ask, bid_not_skip_mask) / tf.boolean_mask(delayed_bid, bid_not_skip_mask) - 1) - 1.8))
-        self.metric.assign_add(tf.math.reduce_sum(10000 * (tf.boolean_mask(reg_bid, ask_not_skip_mask) / tf.boolean_mask(delayed_ask, ask_not_skip_mask) - 1) - 1.8))
+        self.count_deals.assign_add(tf.math.reduce_sum(bid_not_skip_mask))
+        self.count_deals.assign_add(tf.math.reduce_sum(ask_not_skip_mask))
 
     def result(self):
-        return self.metric
+        return self.count_deals
     
     def reset_state(self):
-        self.metric.assign(0)
+        self.count_deals.assign(0)
