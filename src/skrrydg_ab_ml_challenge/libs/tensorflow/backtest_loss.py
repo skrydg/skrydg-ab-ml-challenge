@@ -37,8 +37,6 @@ def backtest_loss(y_true, y_pred):
     weight = tf.where(weight < (1 - 1e-4 * interest), 0.1 * weight, tf.math.pow(weight, 3) * 2)
 
     weight = tf.math.minimum(weight, 1000)
-
-    weight = tf.math.pow(weight, 3)
     
     sell_mask = y_pred > 0
     buy_mask = y_pred <= 0
