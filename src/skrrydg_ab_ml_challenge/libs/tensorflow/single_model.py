@@ -61,25 +61,25 @@ class SingleModel:
         output_X = X
         output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(normalized_X)
         output_X = tf.keras.layers.Dense(
-            units=256,
+            units=512,
             activation='linear'
         )(output_X)
 
         output_X = tf.keras.layers.BatchNormalization()(output_X)
         output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
 
+        output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
+        output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(output_X)
+        output_X = tf.keras.layers.Dense(
+            units=256,
+            activation='linear'
+        )(output_X)
+        output_X = tf.keras.layers.BatchNormalization()(output_X)
+        output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
         output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
         output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(output_X)
         output_X = tf.keras.layers.Dense(
             units=128,
-            activation='linear'
-        )(output_X)
-        output_X = tf.keras.layers.BatchNormalization()(output_X)
-        output_X = tf.keras.layers.ReLU(negative_slope=0.1)(output_X)
-        output_X = tf.keras.layers.Concatenate(axis=1)([output_X, normalized_X])
-        output_X = tf.keras.layers.GaussianDropout(0.1, seed=42)(output_X)
-        output_X = tf.keras.layers.Dense(
-            units=64,
             activation='linear'
         )(output_X)
         output_X = tf.keras.layers.BatchNormalization()(output_X)
@@ -126,7 +126,7 @@ class SingleModel:
         
         train_deserializer = DatasetDeserializer(train_serialized_directory)
         train_dataset = train_deserializer.deserialize()
-        train_dataset = train_dataset.map(self.__pack_train).unbatch().shuffle(buffer_size=self.count_rows_in_memory).batch(self.batch_size)
+        train_dataset = train_dataset.map(self.__pack_train).unbatch().shuffle(buffer_size=self.count_rows_in_memory, seed=42).batch(self.batch_size)
 
         test_serializer = DatasetSerializer(self.env.output_directory / f"test_dataset")
         test_serialized_directory = test_serializer.serialize(test_dataframe[self.all_features])
