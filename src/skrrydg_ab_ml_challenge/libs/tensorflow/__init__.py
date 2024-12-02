@@ -6,3 +6,4 @@ from .backtest_metric import *
 from .single_model import *
 from .count_deals_metric import *
 from .count_not_in_spread_metric import *
+from .mse_loss import *
