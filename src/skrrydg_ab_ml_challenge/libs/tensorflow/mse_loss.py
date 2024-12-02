@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 @tf.keras.utils.register_keras_serializable()
-def backtest_loss(y_true, y_pred):
+def mse_loss(y_true, y_pred):
     bid = y_true[:, 0]
     ask = y_true[:, 1]
     delayed_bid = y_true[:, 2]
@@ -31,4 +31,4 @@ def backtest_loss(y_true, y_pred):
     reg_bid = tf.boolean_mask(reg_bid, mask)
     reg_ask = tf.boolean_mask(reg_ask, mask)
     
-    return tf.keras.losses.MSE(y_pred, (reg_bid + reg_ask) // 2)
+    return tf.keras.losses.MSE(y_pred, (reg_bid + reg_ask) // 2 - (ask - bid) // 2)
