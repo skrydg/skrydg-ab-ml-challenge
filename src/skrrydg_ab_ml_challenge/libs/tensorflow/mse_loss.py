@@ -31,4 +31,4 @@ def mse_loss(y_true, y_pred):
     reg_bid = tf.boolean_mask(reg_bid, mask)
     reg_ask = tf.boolean_mask(reg_ask, mask)
     
-    return tf.keras.losses.MSE((reg_bid + reg_ask) / 2 - (ask + bid) / 2, y_pred)
+    return tf.keras.losses.MSE(y_pred, (reg_bid + reg_ask) / 2 - (ask + bid) / 2)
