@@ -8,6 +8,8 @@ from skrrydg_ab_ml_challenge.libs.env import Env
 from skrrydg_ab_ml_challenge.libs.model import VotingModel
 
 from skrrydg_ab_ml_challenge.libs.tensorflow.backtest_metric import BacktestMetric
+from skrrydg_ab_ml_challenge.libs.tensorflow.count_not_in_spread_metric import CountNotInSpreadMetric
+from skrrydg_ab_ml_challenge.libs.tensorflow.count_deals_metric import CountDealsMetric
 from skrrydg_ab_ml_challenge.libs.tensorflow.dataset import DatasetSerializer, DatasetDeserializer
 from skrrydg_ab_ml_challenge.libs.tensorflow.backtest_loss import backtest_loss
 from skrrydg_ab_ml_challenge.libs.tensorflow.pretrained_model import PreTrainedDNNModel
@@ -87,9 +89,9 @@ class FFKFoldModel:
         model = tf.keras.Model(X, output_X)
         model.build(input_shape=(len(self.features), ))
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(0.001),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
             loss=backtest_loss,
-            metrics=[BacktestMetric()]
+            metrics=[BacktestMetric(), CountNotInSpreadMetric(), CountDealsMetric()]
         )
         model.summary()
         return model
